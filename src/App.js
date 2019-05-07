@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import './App.css';
 
 import ndarray from 'ndarray';
 import ops from 'ndarray-ops';
