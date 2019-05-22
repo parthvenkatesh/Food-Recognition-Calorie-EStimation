@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import './App.css';
 
 import ndarray from 'ndarray';
 import ops from 'ndarray-ops';
@@ -6,7 +7,6 @@ import ops from 'ndarray-ops';
 import { food101topK } from './utils';
 import { con } from './utils';
 
-const loadImage = window.loadImage;
 
 const mapProb = (prob) => {
   if (prob * 100 < 2) {
@@ -64,8 +64,7 @@ class App extends Component {
       loadingPercent: 0,
       classifyPercent: 0,
       topK: null,
-      hasWebgl,
-      url: 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&w=1000&q=80'
+      hasWebgl
     };
   }
 
@@ -100,7 +99,7 @@ class App extends Component {
         modelLoaded: true
       });
 
-      setTimeout(() => this.loadImageToCanvas(this.state.url), 100);
+      setTimeout(() => this.loadImageToCanvas(), 100);
     })
     .catch(err => {
       clearInterval(interval);
@@ -113,9 +112,10 @@ class App extends Component {
     });
   }
 
-  loadImageToCanvas = (url) => {
+  loadImageToCanvas = () => {
     console.log('Loading Image');
-    if (!url) {
+    var file = document.getElementById('file')
+    if (!file.value) {
       return;
     };
 
@@ -126,13 +126,29 @@ class App extends Component {
       classifyPercent: 0,
       topK: null
     });
-
-    loadImage(
-      url,
-      img => {
-        if (img.type === 'error') {
-	  alert("Access to image at this URL is denied.");
-          console.log('Error loading image');
+      
+      var input, fr, img
+      input = document.getElementById('file');
+      if (!input) {
+            console.log("Um, couldn't find the imgfile element.");
+          this.setState({
+            imageLoadingError: true,
+            imageLoading: false,
+            modelRunning: false,
+            url: null
+          });
+        }
+        else if (!input.files) {
+            console.log("This browser doesn't seem to support the `files` property of file inputs.");
+          this.setState({
+            imageLoadingError: true,
+            imageLoading: false,
+            modelRunning: false,
+            url: null
+          });
+        }
+        else if (!input.files[0]) {
+            console.log("Please select a file before clicking 'Load'");
           this.setState({
             imageLoadingError: true,
             imageLoading: false,
@@ -140,29 +156,35 @@ class App extends Component {
             url: null
           });
 
-        } else {
-          console.log('Image Loaded');
-          const ctx = document.getElementById('input-canvas').getContext('2d');
-          ctx.drawImage(img, 0, 0);
+        }
+        else {
+            file = input.files[0];
+            fr = new FileReader();
+            fr.onload = createImage;
+            fr.readAsDataURL(file);
           this.setState({
             imageLoadingError: false,
             imageLoading: false,
             modelRunning: true
           });
+        }
+        function createImage() {
+            img = new Image();
+            img.onload = imageLoaded;
+            img.src = fr.result;
+        }
+
+        function imageLoaded() {
+            var canvas = document.getElementById("input-canvas")
+            canvas.width = 299;
+            canvas.height = 299;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img,0,0,299,299);	
+        }
           setTimeout(() => {
             this.runModel();
           }, 1000)
-        }
-      },
-      {
-        maxWidth: 299,
-        maxHeight: 299,
-        cover: true,
-        crop: true,
-        canvas: true,
-        crossOrigin: 'Anonymous'
-      }
-    );
+
   }
 
   runModel = () => {
@@ -177,9 +199,6 @@ class App extends Component {
     );
     const { data, width, height } = imageData;
 
-    // data processing
-    // see https://github.com/fchollet/keras/blob/master/keras/applications/imagenet_utils.py
-    // and https://github.com/fchollet/keras/blob/master/keras/applications/inception_v3.py
     let dataTensor = ndarray(new Float32Array(data), [ width, height, 4 ]);
     let dataProcessedTensor = ndarray(new Float32Array(width * height * 3), [
       width,
@@ -227,12 +246,9 @@ class App extends Component {
   }
 
   classifyNewImage = () => {
-    const newUrl = this.urlInput.value;
-    this.setState({
-      url: this.urlInput.value
-    });
-    console.log('classifying new image', newUrl);
-    this.loadImageToCanvas(newUrl);
+    console.log('classifying new image', );
+    this.loadImageToCanvas();
+
   }
 
   render() {
@@ -272,7 +288,7 @@ class App extends Component {
         <div className='interactive'>
           { modelLoaded && !modelRunning && !imageLoading ?
           <p>
-            <center>Food Image URL: <input type='text' ref={(input) => { this.urlInput = input; }}/>
+            <center>Food Image URL: <input type='file' id='file' ref={(input) => { this.urlInput = input; }}/>
             <br/><br/>
             <button onClick={this.classifyNewImage}>Classify Image</button></center>
           </p>
