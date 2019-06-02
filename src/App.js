@@ -43,6 +43,9 @@ class App extends Component {
   constructor() {
     super();
 
+    localStorage.setItem("food",JSON.stringify([]))
+    localStorage.setItem("consumed",0)
+
     let hasWebgl = false;
     const canvas = document.createElement('canvas');
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -64,6 +67,7 @@ class App extends Component {
       loadingPercent: 0,
       classifyPercent: 0,
       topK: null,
+      inputTaken: false,
       hasWebgl
     };
   }
@@ -250,6 +254,48 @@ class App extends Component {
     this.loadImageToCanvas();
 
   }
+  showData = () => {
+	var food = JSON.parse(window.localStorage.getItem('food'));
+	var sug = parseInt(window.localStorage.getItem('suggested'));
+	var cons = parseInt(window.localStorage.getItem('consumed'));
+	var str = 'Food Item\tCalories'
+	for(let i=0;i< food.length;i++)
+		str = str+'\n'+food[i]+'  ->  '+con(food[i])
+	str = str+'\n-----------------------------'
+	str = str+'\nTotal Consumed  ->  '+cons
+	str = str+'\nSuggested  ->  '+sug
+	str = str+'\nTo be consumed  ->  '+(sug-cons)
+	alert(str)
+  }
+  saveData = () => {
+
+	console.log("Initiate Saving Data");
+	var sex = (document.getElementById("sex").value).toUpperCase();
+	var age = parseInt(document.getElementById("age").value);
+	var ht = parseInt(document.getElementById("ht").value);
+	var wt = parseInt(document.getElementById("wt").value);
+	if( isNaN(age) || isNaN(ht) || isNaN(wt) || !['M','F'].includes(sex)){
+		console.log(age)
+		console.log(ht)
+		console.log(wt)
+		console.log(sex)
+		console.log("Saving Data Failed")
+		alert("Enter data in suggested format")
+		document.location.reload(true)
+		return
+		}
+	var cal;
+	if( sex === 'M' )
+		cal = 864- (9.72*age) + (14.2*wt) + (503 * ht)
+	else
+		cal = 387- (7.31*age) + (10.9*wt) + (660 * ht)
+	console.log(cal);
+	console.log("Data saved")
+	localStorage.setItem("suggested",cal)
+	this.setState({
+	inputTaken:true
+	});
+  }
 
   render() {
     const {
@@ -260,18 +306,51 @@ class App extends Component {
       imageLoading,
       imageLoadingError,
       classifyPercent,
-      topK
+      topK,
+      inputTaken
     } = this.state;
     return (
       <div className="App">
         <center><h1>Food Recognition with Calorie Estimation</h1></center>
-        { !modelLoaded ?
+        { inputTaken && modelLoaded && !modelRunning ? 
+		<center>
+			<button onClick={this.showData}>Show Data</button><br></br><br></br>	
+		</center>
+		
+		: ''}
+        { !modelLoaded && !inputTaken ?
         <p className='intro'>
-          <center>To get started, click the Load Model button to load the model.</center>
+          <center>To get started, enter details and click the Save Data.</center><br></br>
+          <center>This will help us keep track of calories you consome and claories you can further consume</center><br></br>
+        </p>
+        : ''}
+	{ !modelLoaded && inputTaken ?
+        <p className='intro'>
+          <center>Now click the button to load the model.</center><br></br>
         </p>
         : ''}
         <div className='init'>
-        { !modelLoaded && !modelLoading ? <center><button onClick={this.loadModel}>Load Model (85 MB)</button></center> : ''}
+        { !modelLoaded && !modelLoading &&!inputTaken ? 
+		<center>
+			<div className='form'>
+			<form autoComplete="off">
+				<input type='text' id='sex' placeholder='M/F' pattern='[MFmf]' required></input><br></br><br></br>
+				<input type='number' id='age' placeholder='Age' required></input><br></br><br></br>
+				<input type='number' id='ht' placeholder='Height in inches' required></input><br></br><br></br>
+				<input type='number' id='wt' placeholder='Weight in Kilograms' required></input><br></br><br></br>
+				<button onClick={this.saveData}>Save Data</button><br></br>
+			</form>
+			</div>
+		</center>
+		
+		: ''}
+        { !modelLoaded && !modelLoading && inputTaken ? 
+		<center>
+			<button onClick={this.loadModel}>Start</button><br></br><br></br>	
+		</center>
+		
+		: ''}
+
         { !modelLoaded && modelLoading ?
           <p className='loading'><center>LOADING MODEL: {loadingPercent}%</center></p>
           : ''}
@@ -288,7 +367,7 @@ class App extends Component {
         <div className='interactive'>
           { modelLoaded && !modelRunning && !imageLoading ?
           <p>
-            <center>Food Image URL: <input type='file' id='file' ref={(input) => { this.urlInput = input; }}/>
+            <center>Food Image: <input type='file' id='file' ref={(input) => { this.urlInput = input; }}/>
             <br/><br/>
             <button onClick={this.classifyNewImage}>Classify Image</button></center>
           </p>

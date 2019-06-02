@@ -131,5 +131,10 @@ tiramisu : 79 ,
 waffles : 125
 
 }
+	var food = JSON.parse(window.localStorage.getItem('food'));
+	var consumed = parseInt(window.localStorage.getItem('consumed')) + values[val];
+	food.push(val)
+	localStorage.setItem("food",JSON.stringify(food))
+	localStorage.setItem("consumed",consumed)
 	return values[val]+" calories";  
 }
